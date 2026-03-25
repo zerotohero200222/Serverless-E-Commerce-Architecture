@@ -1,0 +1,86 @@
+steps:
+  # -------------------------------------------------------------------------
+  # STAGE 1: DOCKER BUILD & PUSH - FRONTEND
+  # -------------------------------------------------------------------------
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-frontend'
+    args: 
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/frontend:${COMMIT_SHA}'
+      - './services/frontend'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-frontend'
+    args: 
+      - 'push'
+      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/frontend:${COMMIT_SHA}'
+
+  # -------------------------------------------------------------------------
+  # STAGE 2: DOCKER BUILD & PUSH - PRODUCT SERVICE
+  # -------------------------------------------------------------------------
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-product'
+    args: 
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/product:${COMMIT_SHA}'
+      - './services/product-service'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-product'
+    args: 
+      - 'push'
+      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/product:${COMMIT_SHA}'
+
+  # -------------------------------------------------------------------------
+  # STAGE 3: DOCKER BUILD & PUSH - INVENTORY SERVICE
+  # -------------------------------------------------------------------------
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-inventory'
+    args: 
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/inventory:${COMMIT_SHA}'
+      - './services/inventory-service'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-inventory'
+    args: 
+      - 'push'
+      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/inventory:${COMMIT_SHA}'
+
+  # -------------------------------------------------------------------------
+  # STAGE 4: TERRAFORM INFRASTRUCTURE DEPLOYMENT
+  # -------------------------------------------------------------------------
+  - name: 'hashicorp/terraform:1.5.0'
+    id: 'terraform-init'
+    dir: 'terraform'
+    args: ['init']
+
+  - name: 'hashicorp/terraform:1.5.0'
+    id: 'terraform-plan'
+    dir: 'terraform'
+    args: 
+      - 'plan'
+      - '-var=project_id=${PROJECT_ID}'
+      - '-var=region=us-central1'
+      - '-var=frontend_image=us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/frontend:${COMMIT_SHA}'
+      - '-var=product_image=us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/product:${COMMIT_SHA}'
+      - '-var=inventory_image=us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/inventory:${COMMIT_SHA}'
+      - '-out=tfplan'
+
+  - name: 'hashicorp/terraform:1.5.0'
+    id: 'terraform-apply'
+    dir: 'terraform'
+    args: 
+      - 'apply'
+      - '-auto-approve'
+      - 'tfplan'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  dynamic_substitutions: true
+
+# The explicit service account for pipeline execution, ensuring secure permissions scaling
+serviceAccount: 'projects/${PROJECT_ID}/serviceAccounts/cloudbuild-deployer@${PROJECT_ID}.iam.gserviceaccount.com'
