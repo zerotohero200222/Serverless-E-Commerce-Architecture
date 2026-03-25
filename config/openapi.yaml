@@ -1,0 +1,80 @@
+swagger: "2.0"
+info:
+  title: "ecommerce-api"
+  description: "Managed API Gateway routing to Cloud Run backends"
+  version: "1.0.0"
+
+schemes:
+  - "https"
+  - "http"
+
+produces:
+  - "application/json"
+
+# Define API Key authentication mechanism
+securityDefinitions:
+  api_key:
+    type: "apiKey"
+    name: "x-api-key"
+    in: "header"
+
+# Enforce API Key requirement globally across all defined paths
+security:
+  - api_key:
+
+paths:
+  /api/products:
+    get:
+      summary: "Retrieve product catalog"
+      operationId: "getProducts"
+      x-google-backend:
+        address: "${product_url}"
+        path_translation: "APPEND_PATH_TO_ADDRESS"
+      responses:
+        "200":
+          description: "Successful response"
+        "401":
+          description: "Unauthorized - Invalid API Key"
+
+  /api/products/{id}:
+    get:
+      summary: "Get product by ID"
+      operationId: "getProductById"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          type: "string"
+      x-google-backend:
+        address: "${product_url}"
+        path_translation: "APPEND_PATH_TO_ADDRESS"
+      responses:
+        "200":
+          description: "Successful response"
+
+  /api/inventory:
+    get:
+      summary: "Retrieve inventory status"
+      operationId: "getInventory"
+      x-google-backend:
+        address: "${inventory_url}"
+        path_translation: "APPEND_PATH_TO_ADDRESS"
+      responses:
+        "200":
+          description: "Successful response"
+
+  /api/inventory/{id}:
+    get:
+      summary: "Get inventory by product ID"
+      operationId: "getInventoryById"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          type: "string"
+      x-google-backend:
+        address: "${inventory_url}"
+        path_translation: "APPEND_PATH_TO_ADDRESS"
+      responses:
+        "200":
+          description: "Successful response"
