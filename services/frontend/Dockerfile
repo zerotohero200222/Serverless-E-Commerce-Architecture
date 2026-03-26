@@ -9,4 +9,4 @@ COPY --from=builder /app/node_modules./node_modules
 COPY..
 EXPOSE 8080
 USER node
-CMD ["npm", "start"]]
+CMD ["npm", "start"]
