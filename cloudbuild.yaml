@@ -1,86 +1,51 @@
 steps:
-  # -------------------------------------------------------------------------
-  # STAGE 1: DOCKER BUILD & PUSH - FRONTEND
-  # -------------------------------------------------------------------------
-  - name: 'gcr.io/cloud-builders/docker'
-    id: 'build-frontend'
-    args: 
-      - 'build'
-      - '-t'
-      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/frontend:${COMMIT_SHA}'
-      - './services/frontend'
+  # 1. Create Docker Repository (Fails gracefully if exists)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud artifacts repositories create backend-services \
+          --repository-format=docker \
+          --location=us-central1 |
 
-  - name: 'gcr.io/cloud-builders/docker'
-    id: 'push-frontend'
-    args: 
-      - 'push'
-      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/frontend:${COMMIT_SHA}'
+| true
 
-  # -------------------------------------------------------------------------
-  # STAGE 2: DOCKER BUILD & PUSH - PRODUCT SERVICE
-  # -------------------------------------------------------------------------
+  # 2. Build Docker Images [6]
   - name: 'gcr.io/cloud-builders/docker'
-    id: 'build-product'
-    args: 
-      - 'build'
-      - '-t'
-      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/product:${COMMIT_SHA}'
-      - './services/product-service'
-
+    args:
+  
   - name: 'gcr.io/cloud-builders/docker'
-    id: 'push-product'
-    args: 
-      - 'push'
-      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/product:${COMMIT_SHA}'
-
-  # -------------------------------------------------------------------------
-  # STAGE 3: DOCKER BUILD & PUSH - INVENTORY SERVICE
-  # -------------------------------------------------------------------------
+    args:
+  
   - name: 'gcr.io/cloud-builders/docker'
-    id: 'build-inventory'
-    args: 
-      - 'build'
-      - '-t'
-      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/inventory:${COMMIT_SHA}'
-      - './services/inventory-service'
+    args:
 
+  # 3. Push to Registry
   - name: 'gcr.io/cloud-builders/docker'
-    id: 'push-inventory'
-    args: 
-      - 'push'
-      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/inventory:${COMMIT_SHA}'
+    args:
+    
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+    
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
 
-  # -------------------------------------------------------------------------
-  # STAGE 4: TERRAFORM INFRASTRUCTURE DEPLOYMENT
-  # -------------------------------------------------------------------------
+  # 4. Terraform Deploy
   - name: 'hashicorp/terraform:1.5.0'
-    id: 'terraform-init'
     dir: 'terraform'
-    args: ['init']
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        terraform init
+        terraform apply -auto-approve \
+          -var="project_id=${PROJECT_ID}" \
+          -var="frontend_image=us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/frontend:${COMMIT_SHA}" \
+          -var="product_image=us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/product:${COMMIT_SHA}" \
+          -var="inventory_image=us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/inventory:${COMMIT_SHA}"
 
-  - name: 'hashicorp/terraform:1.5.0'
-    id: 'terraform-plan'
-    dir: 'terraform'
-    args: 
-      - 'plan'
-      - '-var=project_id=${PROJECT_ID}'
-      - '-var=region=us-central1'
-      - '-var=frontend_image=us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/frontend:${COMMIT_SHA}'
-      - '-var=product_image=us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/product:${COMMIT_SHA}'
-      - '-var=inventory_image=us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/inventory:${COMMIT_SHA}'
-      - '-out=tfplan'
-
-  - name: 'hashicorp/terraform:1.5.0'
-    id: 'terraform-apply'
-    dir: 'terraform'
-    args: 
-      - 'apply'
-      - '-auto-approve'
-      - 'tfplan'
-
-options:
-  logging: CLOUD_LOGGING_ONLY
-  dynamic_substitutions: true
-
-# The explicit service account for pipeline execution, ensuring secure permissions scaling
-serviceAccount: 'projects/${PROJECT_ID}/serviceAccounts/cloudbuild-deployer@${PROJECT_ID}.iam.gserviceaccount.com'
+images:
+  - 'us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/frontend:${COMMIT_SHA}'
+  - 'us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/product:${COMMIT_SHA}'
+  - 'us-central1-docker.pkg.dev/${PROJECT_ID}/backend-services/inventory:${COMMIT_SHA}'
