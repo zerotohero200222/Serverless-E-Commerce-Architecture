@@ -10,7 +10,7 @@ resource "google_compute_region_network_endpoint_group" "frontend_neg" {
   }
 }
 
-# API Gateway Serverless NEG
+# API Gateway Serverless NEG [5]
 resource "google_compute_region_network_endpoint_group" "api_gateway_neg" {
   name                  = "api-gateway-neg"
   network_endpoint_type = "SERVERLESS"
@@ -68,7 +68,6 @@ resource "google_compute_url_map" "ecommerce_lb" {
   }
 }
 
-# HTTP Proxy and Forwarding Rule (Frontend IP)
 resource "google_compute_target_http_proxy" "ecommerce_proxy" {
   name    = "ecommerce-http-proxy"
   url_map = google_compute_url_map.ecommerce_lb.id
