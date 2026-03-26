@@ -1,12 +1,11 @@
 {
-  "name": "frontend-service",
+  "name": "frontend",
   "version": "1.0.0",
-  "description": "E-commerce user interface",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
   "dependencies": {
     "express": "^4.18.2"
+  },
+  "scripts": {
+    "start": "node server.js"
   }
 }
