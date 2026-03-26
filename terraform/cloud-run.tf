@@ -1,4 +1,4 @@
-# Service Account strictly used by API Gateway to authenticate against Cloud Run
+# Service Account strictly used by API Gateway to authenticate against Cloud Run [3]
 resource "google_service_account" "api_gateway_sa" {
   account_id   = "api-gateway-invoker"
   display_name = "API Gateway Service Account"
@@ -23,7 +23,6 @@ resource "google_cloud_run_v2_service" "frontend" {
   depends_on = [google_project_service.enabled_apis]
 }
 
-# Allow public access only to the frontend service
 resource "google_cloud_run_service_iam_member" "frontend_public" {
   location = google_cloud_run_v2_service.frontend.location
   project  = google_cloud_run_v2_service.frontend.project
@@ -60,7 +59,7 @@ resource "google_cloud_run_v2_service" "inventory" {
   depends_on = [google_project_service.enabled_apis]
 }
 
-# Authorize API Gateway to invoke backend services
+# Authorize API Gateway to invoke backend services [3]
 resource "google_cloud_run_service_iam_member" "product_gateway_invoker" {
   location = google_cloud_run_v2_service.product.location
   project  = google_cloud_run_v2_service.product.project
