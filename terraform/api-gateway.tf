@@ -42,3 +42,17 @@ resource "google_api_gateway_gateway" "ecommerce_gateway" {
   display_name = "E-Commerce Primary Gateway"
   depends_on   = [google_api_gateway_api_config.ecommerce_config]
 }
+
+resource "google_apikeys_key" "gateway_key" {
+  name         = "internal-gateway-key"
+  display_name = "Internal Key for API Gateway"
+  project      = var.project_id
+
+  restrictions {
+    api_targets {
+      service = google_api_gateway_api.ecommerce_api.managed_service
+      methods = ["*"]
+    }
+  }
+  depends_on = [google_project_service.enabled_apis]
+}
