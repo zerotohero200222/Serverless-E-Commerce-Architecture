@@ -15,15 +15,11 @@ resource "google_apikeys_key" "gateway_key" {
   name         = "${local.prefix}-gateway-key"
   display_name = "Ecommerce LB → API Gateway key (${var.env})"
 
-  # Restrict to API Gateway only (principle of least privilege)
-  restrictions {
-    api_targets {
-      # The managed service name matches the pattern: <api_id>-<hash>.apigateway.googleapis.com
-      # At creation time we cannot know the exact managed service name, so we
-      # use a broad service target.  Tighten this post-deploy if desired.
-      service = "apigateway.googleapis.com"
-    }
-  }
+  # NOTE: API key restrictions referencing apigateway.googleapis.com require
+  # the managed service name (known only after gateway creation).
+  # Restrictions are intentionally left open here and should be tightened
+  # post-deploy once the gateway managed service name is known.
+  # To tighten: add restrictions { api_targets { service = "<gateway-managed-service>" } }
 
   depends_on = [google_project_service.apis]
 }
