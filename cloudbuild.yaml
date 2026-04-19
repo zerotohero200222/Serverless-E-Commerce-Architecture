@@ -218,6 +218,8 @@ steps:
 
   # ── Step 10: Extract LB IP and smoke-test the endpoint ─────────────────────
   # Retries for up to 5 minutes because the LB takes ~2 min to propagate.
+  # IMPORTANT: ALL shell variables use $$ so Cloud Build does not treat them
+  # as substitution variables (only $_VAR prefixed names are substitutions).
   - id: "smoke-test"
     name: "hashicorp/terraform:1.6"
     waitFor: ["tf-apply"]
@@ -229,8 +231,8 @@ steps:
 
         # ── Grab the LB IP from Terraform output ─────────────────────────────
         cd infra
-        LB_IP=$(terraform output -raw load_balancer_ip)
-        echo "Load Balancer IP: $LB_IP"
+        LB_IP=$$(terraform output -raw load_balancer_ip)
+        echo "Load Balancer IP: $$LB_IP"
 
         # ── Install curl (alpine-based terraform image) ───────────────────────
         apk add --no-cache curl > /dev/null 2>&1
@@ -240,35 +242,35 @@ steps:
         SLEEP_SECONDS=15
         attempt=1
 
-        until curl -sf --max-time 10 "http://$${LB_IP}/" > /dev/null; do
-          if [ $attempt -ge $MAX_RETRIES ]; then
-            echo "ERROR: LB did not become healthy after $((MAX_RETRIES * SLEEP_SECONDS))s"
+        until curl -sf --max-time 10 "http://$$LB_IP/" > /dev/null; do
+          if [ $$attempt -ge $$MAX_RETRIES ]; then
+            echo "ERROR: LB did not become healthy after $$(($$MAX_RETRIES * $$SLEEP_SECONDS))s"
             exit 1
           fi
-          echo "Attempt $attempt/$MAX_RETRIES — waiting $${SLEEP_SECONDS}s for LB to propagate..."
-          sleep $SLEEP_SECONDS
-          attempt=$((attempt + 1))
+          echo "Attempt $$attempt/$$MAX_RETRIES — waiting $${SLEEP_SECONDS}s for LB to propagate..."
+          sleep $$SLEEP_SECONDS
+          attempt=$$(($$attempt + 1))
         done
 
-        echo "✅ Frontend is healthy at http://$${LB_IP}/"
+        echo "✅ Frontend is healthy at http://$$LB_IP/"
 
         # ── Verify API routes ─────────────────────────────────────────────────
         for ROUTE in products orders inventory; do
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://$${LB_IP}/api/$${ROUTE}")
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ /api/$${ROUTE} → HTTP $HTTP_CODE"
+          HTTP_CODE=$$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://$$LB_IP/api/$$ROUTE")
+          if [ "$$HTTP_CODE" = "200" ]; then
+            echo "✅ /api/$$ROUTE → HTTP $$HTTP_CODE"
           else
-            echo "⚠️  /api/$${ROUTE} → HTTP $HTTP_CODE (may need warm-up)"
+            echo "⚠️  /api/$$ROUTE → HTTP $$HTTP_CODE (may need warm-up)"
           fi
         done
 
         echo ""
         echo "════════════════════════════════════════════════"
         echo "  DEPLOYMENT COMPLETE"
-        echo "  Frontend : http://$${LB_IP}/"
-        echo "  Products : http://$${LB_IP}/api/products"
-        echo "  Orders   : http://$${LB_IP}/api/orders"
-        echo "  Inventory: http://$${LB_IP}/api/inventory"
+        echo "  Frontend : http://$$LB_IP/"
+        echo "  Products : http://$$LB_IP/api/products"
+        echo "  Orders   : http://$$LB_IP/api/orders"
+        echo "  Inventory: http://$$LB_IP/api/inventory"
         echo "════════════════════════════════════════════════"
 
 # ── Artifact Registry images registered as build artifacts ───────────────────
