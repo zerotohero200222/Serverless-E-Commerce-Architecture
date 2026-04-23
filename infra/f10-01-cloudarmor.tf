@@ -42,7 +42,6 @@ resource "google_compute_security_policy" "armor" {
       request_headers_to_adds {
         header_name  = "x-api-key"
         header_value = google_apikeys_key.gateway_key.key_string
-        replace      = true
       }
     }
   }
