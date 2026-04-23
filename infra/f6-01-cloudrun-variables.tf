@@ -1,8 +1,8 @@
 variable "cloud_run_ingress" {
   type    = string
-  default = "all"
+  default = "INGRESS_TRAFFIC_ALL"
   validation {
-    condition     = contains(["all", "internal", "internal-and-cloud-load-balancing"], var.cloud_run_ingress)
+    condition     = contains(["INGRESS_TRAFFIC_ALL", "INGRESS_TRAFFIC_INTERNAL_ONLY", "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"], var.cloud_run_ingress)
     error_message = "Must be one of: all, internal, internal-and-cloud-load-balancing."
   }
 }

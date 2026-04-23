@@ -8,7 +8,7 @@ resource "google_cloud_run_v2_service" "frontend" {
   location = var.region
 
   # Frontend is publicly reachable via the LB, keep ingress open
-  ingress = "all"
+  ingress = "INGRESS_TRAFFIC_ALL"
 
   labels = local.common_labels
 
