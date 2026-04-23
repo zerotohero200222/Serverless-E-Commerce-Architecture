@@ -30,7 +30,7 @@ cloud_run_cpu             = "1"
 cloud_run_memory          = "512Mi"
 cloud_run_concurrency     = 80
 cloud_run_timeout_seconds = 60
-cloud_run_ingress         = "all"
+cloud_run_ingress         = "INGRESS_TRAFFIC_ALL"
 
 # ── API Gateway ───────────────────────────────────────────────────────────────
 api_gateway_deadline     = 60
