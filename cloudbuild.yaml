@@ -186,6 +186,7 @@ steps:
     dir: "infra"
 
   - id: "tf-apply"
+    timeout: "3000s"
     name: "hashicorp/terraform:1.6"
     waitFor: ["tf-plan"]
     entrypoint: "terraform"

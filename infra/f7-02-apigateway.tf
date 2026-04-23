@@ -1,25 +1,28 @@
 ##############################################################################
 # f7-02-apigateway.tf — API Gateway: API + Config + Gateway
 #
-# The OpenAPI spec is rendered via templatefile() so the Cloud Run URLs
-# (which are known only after Terraform creates the Cloud Run services)
-# are injected at plan time — no shell variable substitution needed.
+# API Gateway provisioning is slow (3-8 min per resource). Explicit timeouts
+# are set on all three resources so Terraform waits long enough instead of
+# timing out with a spurious error.
 ##############################################################################
 
-# ── 1. API resource (logical grouping) ────────────────────────────────────────
+# ── 1. API resource ───────────────────────────────────────────────────────────
 resource "google_api_gateway_api" "ecommerce" {
   provider     = google-beta
   project      = var.project_id
   api_id       = local.api_id
   display_name = var.api_gateway_display_name
 
+  timeouts {
+    create = "20m"
+    update = "20m"
+    delete = "20m"
+  }
+
   depends_on = [google_project_service.apis]
 }
 
-# ── 2. API Config (versioned OpenAPI spec) ────────────────────────────────────
-# templatefile() renders the OpenAPI YAML, substituting the real Cloud Run
-# service URLs and other parameters.  A new config is created whenever the
-# spec changes; the gateway is then updated to point at the latest config.
+# ── 2. API Config ─────────────────────────────────────────────────────────────
 resource "google_api_gateway_api_config" "ecommerce" {
   provider      = google-beta
   project       = var.project_id
@@ -40,6 +43,12 @@ resource "google_api_gateway_api_config" "ecommerce" {
     }
   }
 
+  timeouts {
+    create = "20m"
+    update = "20m"
+    delete = "20m"
+  }
+
   lifecycle {
     create_before_destroy = true
   }
@@ -52,7 +61,7 @@ resource "google_api_gateway_api_config" "ecommerce" {
   ]
 }
 
-# ── 3. Gateway (regional deployment of the config) ────────────────────────────
+# ── 3. Gateway ────────────────────────────────────────────────────────────────
 resource "google_api_gateway_gateway" "ecommerce" {
   provider     = google-beta
   project      = var.project_id
@@ -60,6 +69,12 @@ resource "google_api_gateway_gateway" "ecommerce" {
   gateway_id   = local.gateway_id
   api_config   = google_api_gateway_api_config.ecommerce.id
   display_name = var.api_gateway_display_name
+
+  timeouts {
+    create = "20m"
+    update = "20m"
+    delete = "20m"
+  }
 
   depends_on = [google_api_gateway_api_config.ecommerce]
 }
