@@ -1,32 +1,13 @@
 ##############################################################################
 # cloudbuild.yaml — Ecommerce Platform CI/CD Pipeline
 #
-# Pipeline phases (sequential — each depends on previous succeeding):
+# PHASE 0 — Create Artifact Registry repo (parallel with builds)
+# PHASE 1 — Docker build + push (4 services)
+# PHASE 2 — Terraform init → validate → plan → apply
+# PHASE 3 — Smoke test
 #
-#   PHASE 1 — Docker builds (all 4 images in parallel within the phase)
-#     Step 01  Build product-service image
-#     Step 02  Build order-service image
-#     Step 03  Build inventory-service image
-#     Step 04  Build frontend-service image
-#     Step 05  Push all images to Artifact Registry
-#
-#   PHASE 2 — Terraform
-#     Step 06  terraform init  (GCS backend)
-#     Step 07  terraform validate
-#     Step 08  terraform plan  (image tags injected as -var flags)
-#     Step 09  terraform apply -auto-approve
-#
-#   PHASE 3 — Smoke tests
-#     Step 10  Verify LB IP is reachable (with retry backoff)
-#
-# Required Cloud Build substitution variables (set in trigger config):
-#   _TF_STATE_BUCKET   GCS bucket name for Terraform state
-#   _PROJECT_ID        GCP project ID  (mirrors $PROJECT_ID but explicit)
-#   _REGION            GCP region      (default: us-central1)
-#   _ENV               Environment     (default: dev)
-#
-# The image tag is derived from the built-in $SHORT_SHA substitution so every
-# build produces a uniquely tagged and traceable image.
+# Required trigger substitution variables:
+#   _TF_STATE_BUCKET, _PROJECT_ID, _REGION, _ENV, _APP_NAME, _AR_REPO
 ##############################################################################
 
 substitutions:
@@ -34,27 +15,42 @@ substitutions:
   _ENV: "dev"
   _APP_NAME: "ecommerce"
   _AR_REPO: "ecommerce-images"
-  # _TF_STATE_BUCKET and _PROJECT_ID must be set in the trigger — no defaults.
 
 options:
   logging: CLOUD_LOGGING_ONLY
-  # Allow individual steps to run in parallel when they share the same
-  # waitFor list.  Sequential ordering is enforced via step IDs below.
   dynamic_substitutions: true
-
-# ── Derived image base path (reused across steps) ────────────────────────────
-# Not a native substitution — we set it via env in each step that needs it.
 
 steps:
 
 # ════════════════════════════════════════════════════════════════════════════
-# PHASE 1 — Build & Push container images
+# PHASE 0 — Create Artifact Registry repo before any push happens
+# Runs in parallel with Docker builds to save time.
+# Uses || true so it is idempotent — safe when repo already exists.
 # ════════════════════════════════════════════════════════════════════════════
 
-  # ── Step 01: Build product-service ─────────────────────────────────────────
+  - id: "create-ar-repo"
+    name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
+    waitFor: ["-"]
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        gcloud artifacts repositories create $_AR_REPO \
+          --repository-format=docker \
+          --location=$_REGION \
+          --project=$_PROJECT_ID \
+          --description="Ecommerce microservice images" || true
+        echo "✅ Artifact Registry repo ready: $_AR_REPO"
+
+# ════════════════════════════════════════════════════════════════════════════
+# PHASE 1 — Build & Push container images
+# All 4 builds start immediately in parallel.
+# Each push waits for its own build + create-ar-repo (so repo exists first).
+# ════════════════════════════════════════════════════════════════════════════
+
   - id: "build-product"
     name: "gcr.io/cloud-builders/docker"
-    waitFor: ["-"]   # start immediately
+    waitFor: ["-"]
     args:
       - build
       - --tag
@@ -67,7 +63,6 @@ steps:
       - "services/product-service/Dockerfile"
       - "services/product-service"
 
-  # ── Step 02: Build order-service ───────────────────────────────────────────
   - id: "build-order"
     name: "gcr.io/cloud-builders/docker"
     waitFor: ["-"]
@@ -83,7 +78,6 @@ steps:
       - "services/order-service/Dockerfile"
       - "services/order-service"
 
-  # ── Step 03: Build inventory-service ───────────────────────────────────────
   - id: "build-inventory"
     name: "gcr.io/cloud-builders/docker"
     waitFor: ["-"]
@@ -99,7 +93,6 @@ steps:
       - "services/inventory-service/Dockerfile"
       - "services/inventory-service"
 
-  # ── Step 04: Build frontend-service ────────────────────────────────────────
   - id: "build-frontend"
     name: "gcr.io/cloud-builders/docker"
     waitFor: ["-"]
@@ -115,11 +108,10 @@ steps:
       - "services/frontend-service/Dockerfile"
       - "services/frontend-service"
 
-  # ── Step 05: Push all images ────────────────────────────────────────────────
-  # All four build steps must complete before any push starts.
+  # Each push waits for BOTH its build AND the AR repo to be ready
   - id: "push-product"
     name: "gcr.io/cloud-builders/docker"
-    waitFor: ["build-product"]
+    waitFor: ["build-product", "create-ar-repo"]
     args:
       - push
       - --all-tags
@@ -127,7 +119,7 @@ steps:
 
   - id: "push-order"
     name: "gcr.io/cloud-builders/docker"
-    waitFor: ["build-order"]
+    waitFor: ["build-order", "create-ar-repo"]
     args:
       - push
       - --all-tags
@@ -135,7 +127,7 @@ steps:
 
   - id: "push-inventory"
     name: "gcr.io/cloud-builders/docker"
-    waitFor: ["build-inventory"]
+    waitFor: ["build-inventory", "create-ar-repo"]
     args:
       - push
       - --all-tags
@@ -143,7 +135,7 @@ steps:
 
   - id: "push-frontend"
     name: "gcr.io/cloud-builders/docker"
-    waitFor: ["build-frontend"]
+    waitFor: ["build-frontend", "create-ar-repo"]
     args:
       - push
       - --all-tags
@@ -151,10 +143,8 @@ steps:
 
 # ════════════════════════════════════════════════════════════════════════════
 # PHASE 2 — Terraform: init → validate → plan → apply
-# Each step waits for ALL push steps to complete before starting.
 # ════════════════════════════════════════════════════════════════════════════
 
-  # ── Step 06: terraform init ─────────────────────────────────────────────────
   - id: "tf-init"
     name: "hashicorp/terraform:1.6"
     waitFor:
@@ -170,7 +160,6 @@ steps:
       - -input=false
     dir: "infra"
 
-  # ── Step 07: terraform validate ────────────────────────────────────────────
   - id: "tf-validate"
     name: "hashicorp/terraform:1.6"
     waitFor: ["tf-init"]
@@ -179,9 +168,6 @@ steps:
       - validate
     dir: "infra"
 
-  # ── Step 08: terraform plan ─────────────────────────────────────────────────
-  # Image tags are injected here via -var so the plan reflects the exact
-  # images built in Phase 1 (identified by SHORT_SHA).
   - id: "tf-plan"
     name: "hashicorp/terraform:1.6"
     waitFor: ["tf-validate"]
@@ -199,8 +185,6 @@ steps:
       - -var=frontend_image_tag=$SHORT_SHA
     dir: "infra"
 
-  # ── Step 09: terraform apply ────────────────────────────────────────────────
-  # Applies the saved plan — no re-evaluation, deterministic.
   - id: "tf-apply"
     name: "hashicorp/terraform:1.6"
     waitFor: ["tf-plan"]
@@ -213,13 +197,9 @@ steps:
     dir: "infra"
 
 # ════════════════════════════════════════════════════════════════════════════
-# PHASE 3 — Smoke test: verify LB is responding
+# PHASE 3 — Smoke test
 # ════════════════════════════════════════════════════════════════════════════
 
-  # ── Step 10: Extract LB IP and smoke-test the endpoint ─────────────────────
-  # Retries for up to 5 minutes because the LB takes ~2 min to propagate.
-  # IMPORTANT: ALL shell variables use $$ so Cloud Build does not treat them
-  # as substitution variables (only $_VAR prefixed names are substitutions).
   - id: "smoke-test"
     name: "hashicorp/terraform:1.6"
     waitFor: ["tf-apply"]
@@ -228,16 +208,12 @@ steps:
       - "-c"
       - |
         set -e
-
-        # ── Grab the LB IP from Terraform output ─────────────────────────────
         cd infra
         LB_IP=$$(terraform output -raw load_balancer_ip)
         echo "Load Balancer IP: $$LB_IP"
 
-        # ── Install curl (alpine-based terraform image) ───────────────────────
         apk add --no-cache curl > /dev/null 2>&1
 
-        # ── Retry loop — LB takes 2-5 min to fully propagate ─────────────────
         MAX_RETRIES=20
         SLEEP_SECONDS=15
         attempt=1
@@ -247,14 +223,13 @@ steps:
             echo "ERROR: LB did not become healthy after $$(($$MAX_RETRIES * $$SLEEP_SECONDS))s"
             exit 1
           fi
-          echo "Attempt $$attempt/$$MAX_RETRIES — waiting $${SLEEP_SECONDS}s for LB to propagate..."
+          echo "Attempt $$attempt/$$MAX_RETRIES — waiting $${SLEEP_SECONDS}s..."
           sleep $$SLEEP_SECONDS
           attempt=$$(($$attempt + 1))
         done
 
-        echo "✅ Frontend is healthy at http://$$LB_IP/"
+        echo "✅ Frontend healthy at http://$$LB_IP/"
 
-        # ── Verify API routes ─────────────────────────────────────────────────
         for ROUTE in products orders inventory; do
           HTTP_CODE=$$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://$$LB_IP/api/$$ROUTE")
           if [ "$$HTTP_CODE" = "200" ]; then
@@ -273,11 +248,10 @@ steps:
         echo "  Inventory: http://$$LB_IP/api/inventory"
         echo "════════════════════════════════════════════════"
 
-# ── Artifact Registry images registered as build artifacts ───────────────────
 images:
   - "$_REGION-docker.pkg.dev/$_PROJECT_ID/$_AR_REPO/product-service:$SHORT_SHA"
   - "$_REGION-docker.pkg.dev/$_PROJECT_ID/$_AR_REPO/order-service:$SHORT_SHA"
   - "$_REGION-docker.pkg.dev/$_PROJECT_ID/$_AR_REPO/inventory-service:$SHORT_SHA"
   - "$_REGION-docker.pkg.dev/$_PROJECT_ID/$_AR_REPO/frontend-service:$SHORT_SHA"
 
-timeout: "3600s"   # 1-hour build timeout
+timeout: "3600s"
