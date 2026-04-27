@@ -34,11 +34,6 @@ resource "google_cloud_run_v2_service" "order" {
       ports {
         container_port = 8080
       }
-
-      env {
-        name  = "PORT"
-        value = "8080"
-      }
       env {
         name  = "ENV"
         value = var.env
