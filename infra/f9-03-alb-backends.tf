@@ -45,7 +45,6 @@ resource "google_compute_backend_service" "api" {
   load_balancing_scheme = var.lb_load_balancing_scheme
   protocol              = var.lb_protocol
   port_name             = "http"
-  timeout_sec           = 60
   enable_cdn            = false
 
   backend {
