@@ -160,9 +160,32 @@ steps:
       - -input=false
     dir: "infra"
 
-  - id: "tf-validate"
+
+  - id: "tf-import-ar-repo"
     name: "hashicorp/terraform:1.6"
     waitFor: ["tf-init"]
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        # Import AR repo into state if it exists in GCP but not in state.
+        # Safe to run every build — idempotent.
+        terraform import \
+          -var=project_id=$_PROJECT_ID \
+          -var=region=$_REGION \
+          -var=env=$_ENV \
+          -var=product_image_tag=$SHORT_SHA \
+          -var=order_image_tag=$SHORT_SHA \
+          -var=inventory_image_tag=$SHORT_SHA \
+          -var=frontend_image_tag=$SHORT_SHA \
+          google_artifact_registry_repository.ecommerce \
+          projects/$_PROJECT_ID/locations/$_REGION/repositories/$_AR_REPO \
+          2>&1 && echo "✅ AR repo imported" || echo "✅ AR repo already in state"
+    dir: "infra"
+
+  - id: "tf-validate"
+    name: "hashicorp/terraform:1.6"
+    waitFor: ["tf-import-ar-repo"]
     entrypoint: "terraform"
     args:
       - validate
