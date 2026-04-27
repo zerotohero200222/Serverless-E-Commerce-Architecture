@@ -31,7 +31,7 @@ steps:
   - id: "create-ar-repo"
     name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     waitFor: ["-"]
-    entrypoint: "bash"
+    entrypoint: "sh"
     args:
       - "-c"
       - |
@@ -164,7 +164,7 @@ steps:
   - id: "tf-import-ar-repo"
     name: "hashicorp/terraform:1.6"
     waitFor: ["tf-init"]
-    entrypoint: "bash"
+    entrypoint: "sh"
     args:
       - "-c"
       - |
