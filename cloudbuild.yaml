@@ -224,6 +224,29 @@ steps:
 # PHASE 3 — Smoke test
 # ════════════════════════════════════════════════════════════════════════════
 
+
+  # ── Enable API Gateway managed service (required for API key validation) ─────
+  # API Gateway creates a managed Cloud Endpoints service dynamically.
+  # Its name is only known after tf-apply. This step enables it so API key
+  # authentication works immediately without any manual CLI intervention.
+  - id: "enable-apigw-managed-service"
+    name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
+    waitFor: ["tf-apply"]
+    entrypoint: "sh"
+    args:
+      - "-c"
+      - |
+        MANAGED_SVC=$$(gcloud api-gateway apis describe ecommerce-dev-api \
+          --project=$_PROJECT_ID \
+          --format="value(managedService)" 2>/dev/null || echo "")
+        if [ -n "$$MANAGED_SVC" ]; then
+          echo "Enabling: $$MANAGED_SVC"
+          gcloud services enable $$MANAGED_SVC --project=$_PROJECT_ID
+          echo "✅ Managed service enabled"
+        else
+          echo "⚠️  Could not determine managed service — skipping"
+        fi
+
   - id: "smoke-test"
     name: "hashicorp/terraform:1.6"
     waitFor: ["tf-apply"]

@@ -69,7 +69,8 @@ ROLES=(
   "roles/compute.securityAdmin"        # Manage Cloud Armor policies
   "roles/iam.serviceAccountUser"       # Impersonate Cloud Run SA
   "roles/serviceusage.serviceUsageAdmin" # Enable GCP APIs
-  "roles/apikeys.admin"                # Create/manage API keys
+  "roles/serviceusage.apiKeysAdmin"    # Create/manage API keys
+  "roles/iam.securityAdmin"            # Set IAM on Cloud Run and AR repos
 )
 
 for ROLE in "${ROLES[@]}"; do

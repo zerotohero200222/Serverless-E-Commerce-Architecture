@@ -6,6 +6,9 @@
 ##############################################################################
 
 locals {
+  # NOTE: The API Gateway managed service (e.g. ecommerce-dev-api-XXXX.apigateway...)
+  # is NOT listed here because its name is only known after API Gateway is created.
+  # The `enable-apigw-managed-service` Cloud Build step enables it post-apply.
   required_apis = [
     "run.googleapis.com",                # Cloud Run
     "compute.googleapis.com",            # Load Balancer, NEGs, Cloud Armor
@@ -32,3 +35,4 @@ resource "google_project_service" "apis" {
 # ── Short convenience alias used as a dependency by downstream resources ──────
 # Any resource that needs APIs enabled first should add:
 #   depends_on = [google_project_service.apis]
+
