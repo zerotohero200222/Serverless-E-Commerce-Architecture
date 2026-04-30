@@ -1,8 +1,3 @@
-##############################################################################
-# f6-05-cloudrun-frontend.tf — Frontend service on Cloud Run
-# allUsers invoker IAM managed via gcloud in cloudbuild.yaml
-##############################################################################
-
 resource "google_cloud_run_v2_service" "frontend" {
   project  = var.project_id
   name     = local.frontend_service_name
@@ -23,8 +18,13 @@ resource "google_cloud_run_v2_service" "frontend" {
         limits   = { cpu = var.cloud_run_cpu, memory = var.cloud_run_memory }
         cpu_idle = true
       }
-      ports { container_port = 8080 }
-      env { name = "ENV" value = var.env }
+      ports {
+        container_port = 8080
+      }
+      env {
+        name  = "ENV"
+        value = var.env
+      }
     }
     timeout = "${var.cloud_run_timeout_seconds}s"
   }

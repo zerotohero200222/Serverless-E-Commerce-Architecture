@@ -1,8 +1,3 @@
-##############################################################################
-# f6-02-cloudrun-product.tf — Product microservice on Cloud Run
-# allUsers invoker IAM managed via gcloud in cloudbuild.yaml
-##############################################################################
-
 resource "google_cloud_run_v2_service" "product" {
   project  = var.project_id
   name     = local.product_service_name
@@ -23,9 +18,17 @@ resource "google_cloud_run_v2_service" "product" {
         limits   = { cpu = var.cloud_run_cpu, memory = var.cloud_run_memory }
         cpu_idle = true
       }
-      ports { container_port = 8080 }
-      env { name = "ENV"          value = var.env }
-      env { name = "SERVICE_NAME" value = "product-service" }
+      ports {
+        container_port = 8080
+      }
+      env {
+        name  = "ENV"
+        value = var.env
+      }
+      env {
+        name  = "SERVICE_NAME"
+        value = "product-service"
+      }
     }
     timeout = "${var.cloud_run_timeout_seconds}s"
   }
