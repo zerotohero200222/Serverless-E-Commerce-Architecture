@@ -1,255 +1,133 @@
-# Ecommerce Platform — GCP Infrastructure
+# Overview
 
-Serverless microservices on Google Cloud Platform, deployed with Terraform and automated via Cloud Build.
+This project implements a secure and scalable API Gateway integration with Google Cloud Load Balancer using Terraform and Cloud Build. The solution automates the deployment of API Gateway configurations, Cloud Armor security policies, backend integrations, and infrastructure updates through Infrastructure as Code principles.
 
-## Architecture
+The repository provides an end-to-end deployment workflow for exposing microservices securely through Google Cloud API Gateway while enforcing controlled access through Load Balancer and Cloud Armor integration.
 
-```
-Internet (Clients & Web)
-         │
-         ▼
-External HTTP(S) Load Balancer  ←── Static Global IP
-         │
-         ├── /         ──────────────────────────────▶ Frontend Service (Cloud Run)
-         │
-         └── /api/*    ──▶ Cloud Armor (injects x-api-key)
-                                │
-                                ▼
-                         API Gateway  ←── requires x-api-key header
-                                │
-                    ┌───────────┼────────────┐
-                    ▼           ▼            ▼
-             product-service  order-service  inventory-service
-               (Cloud Run)   (Cloud Run)    (Cloud Run)
-```
+# Why This Project Exists
 
-**Security model:**
-- Direct requests to the API Gateway hostname → `401 Unauthorized` (no API key)
-- Requests via Load Balancer → Cloud Armor injects `x-api-key` header automatically → `200 OK`
+Modern microservice architectures commonly expose backend services through API Gateways and Load Balancers. Managing these integrations manually introduces operational complexity, inconsistent configurations, deployment risks, and security gaps.
 
----
+This project was created to standardize and automate the deployment of API Gateway infrastructure using Terraform and Cloud Build CI/CD pipelines while ensuring production-grade security practices.
 
-## Repository structure
+# Common Challenges Include
 
-```
-.
-├── cloudbuild.yaml                   # Cloud Build CI/CD pipeline
-├── bootstrap.sh                      # One-time IAM + bucket setup
-│
-├── services/
-│   ├── product-service/
-│   │   ├── Dockerfile
-│   │   ├── package.json
-│   │   └── server.js
-│   ├── order-service/
-│   │   ├── Dockerfile
-│   │   ├── package.json
-│   │   └── server.js
-│   ├── inventory-service/
-│   │   ├── Dockerfile
-│   │   ├── package.json
-│   │   └── server.js
-│   └── frontend-service/
-│       ├── Dockerfile
-│       ├── package.json
-│       └── server.js
-│
-└── infra/                            # Terraform
-    ├── f1-versions.tf                # Providers + GCS backend
-    ├── f2-generic-variables.tf       # All input variables
-    ├── f3-local-variables.tf         # Naming convention locals
-    ├── f4-apis.tf                    # Enable GCP APIs
-    ├── f5-artifact-registry.tf       # Docker image repository
-    ├── f6-01-cloudrun-variables.tf   # Cloud Run variables
-    ├── f6-02-cloudrun-product.tf     # product-service
-    ├── f6-03-cloudrun-order.tf       # order-service
-    ├── f6-04-cloudrun-inventory.tf   # inventory-service
-    ├── f6-05-cloudrun-frontend.tf    # frontend-service
-    ├── f6-06-cloudrun-outputs.tf
-    ├── f7-01-apigateway-variables.tf
-    ├── f7-02-apigateway.tf           # API + Config + Gateway
-    ├── f7-03-apigateway-outputs.tf
-    ├── f8-01-apikey.tf               # API key for Gateway auth
-    ├── f9-01-alb-variables.tf
-    ├── f9-02-alb-negs.tf             # Serverless NEGs
-    ├── f9-03-alb-backends.tf         # Backend services
-    ├── f9-04-alb-urlmap.tf           # URL map + path rules
-    ├── f9-05-alb-frontend.tf         # IP + proxy + forwarding rule
-    ├── f9-06-alb-outputs.tf
-    ├── f10-01-cloudarmor.tf          # Cloud Armor + header injection
-    ├── f10-02-cloudarmor-outputs.tf
-    ├── terraform.tfvars              # Default variable values
-    └── templates/
-        └── openapi.yaml.tpl          # API Gateway OpenAPI spec template
-```
+* Manual API Gateway configuration management
+* Inconsistent infrastructure deployments across environments
+* Direct exposure of API Gateway endpoints
+* Difficulty securing backend services with centralized authentication
+* Lack of automated infrastructure deployment pipelines
+* Complex Load Balancer and backend integrations
+* Managing API key enforcement at scale
+* Operational overhead in maintaining cloud infrastructure manually
 
----
+# Key Challenges Addressed
 
-## Prerequisites
+* Automated infrastructure provisioning using Terraform
+* CI/CD-driven deployments using Cloud Build Triggers
+* Secure API Gateway access using Cloud Armor
+* API key injection through security policies
+* Backend integration with Google Cloud Load Balancer
+* Version-controlled infrastructure configuration
+* Reusable deployment structure for future enhancements
+* Simplified operational management through Infrastructure as Code
 
-- GCP project with billing enabled
-- `gcloud` CLI authenticated (`gcloud auth login`)
-- GitHub repository connected to Cloud Build
+# Problems Solved
 
----
+This implementation solves the following operational and security problems:
 
-## Step 1 — One-time bootstrap
+* Prevents direct unauthorized access to API Gateway endpoints
+* Enables centralized API authentication enforcement
+* Eliminates manual infrastructure deployment steps
+* Reduces configuration drift between deployments
+* Automates infrastructure provisioning and updates
+* Simplifies backend service integration with Load Balancer
+* Provides secure routing between frontend and backend services
+* Improves deployment consistency through Cloud Build automation
 
-Run this **once** from Cloud Shell or a local terminal. It creates the Terraform state bucket and grants the Cloud Build SA the necessary IAM roles.
+# How the Solution Works
 
-```bash
-export PROJECT_ID="your-project-id"
-export REGION="us-central1"
-chmod +x bootstrap.sh
-./bootstrap.sh
-```
+The solution uses Terraform to provision and manage Google Cloud infrastructure components including:
 
-The script prints the exact substitution variables you need for the Cloud Build trigger.
+* API Gateway configurations
+* Cloud Armor security policies
+* Backend services
+* Network Endpoint Groups
+* URL map integrations
+* API key configuration
+* Load Balancer backend routing
 
----
+Cloud Build Triggers monitor the connected GitHub repository and automatically execute Terraform deployment pipelines whenever changes are pushed to the configured branch.
 
-## Step 2 — Add your service source code
+Cloud Armor injects the required API key headers into requests routed through the Load Balancer, ensuring that backend APIs remain inaccessible through direct gateway access.
 
-Place each service's source code under `services/<name>/`:
+The architecture enforces secure access patterns where only requests passing through the authorized Load Balancer are accepted.
 
-```
-services/
-├── product-service/
-│   ├── Dockerfile      ← already provided
-│   ├── package.json    ← add your own
-│   └── server.js       ← add your own
-...
-```
+# Key Features
 
-Each service must listen on `PORT=8080`.
+* Terraform-based Infrastructure as Code implementation
+* Automated deployment through Cloud Build Triggers
+* API Gateway integration with Load Balancer
+* Cloud Armor security policy integration
+* API key injection for secured backend access
+* Automated backend service provisioning
+* OpenAPI specification integration
+* Reusable Terraform module structure
+* Production-ready deployment workflow
+* Version-controlled infrastructure management
+* Secure API routing implementation
+* CI/CD pipeline integration with GitHub
 
----
+# Prerequisites
 
-## Step 3 — Create the Cloud Build trigger
+Before deploying this project, ensure the following requirements are completed:
 
-In the GCP Console → Cloud Build → Triggers → **Create Trigger**:
+* Google Cloud Project with billing enabled
+* Google Cloud SDK installed and configured
+* Terraform installed
+* GitHub repository access
+* Cloud Build API enabled
+* API Gateway API enabled
+* Compute Engine API enabled
+* Appropriate IAM permissions for deployment
+* Existing Load Balancer configuration
+* Existing Cloud Run backend services
+* OpenAPI specification file
 
-| Field | Value |
-|---|---|
-| Event | Push to a branch |
-| Repository | Your GitHub repo (connect via Cloud Build GitHub App) |
-| Branch | `^main$` |
-| Configuration | Cloud Build configuration file |
-| File location | `cloudbuild.yaml` |
+# When to Use This Project
 
-**Substitution variables** (add all of these):
+This project is suitable for:
 
-| Variable | Value |
-|---|---|
-| `_PROJECT_ID` | your GCP project ID |
-| `_REGION` | `us-central1` |
-| `_ENV` | `dev` |
-| `_APP_NAME` | `ecommerce` |
-| `_AR_REPO` | `ecommerce-images` |
-| `_TF_STATE_BUCKET` | `ecommerce-tf-state-<project-id>` |
+* Microservice-based architectures
+* API Gateway deployments on Google Cloud
+* Secure backend API exposure
+* Infrastructure automation initiatives
+* CI/CD-driven cloud deployments
+* Organizations implementing Infrastructure as Code
+* Teams requiring centralized API security enforcement
+* Production-grade API management deployments
+* Automated Terraform deployment workflows
 
----
+# Future Improvements
 
-## Step 4 — Update terraform.tfvars
+Potential enhancements for future implementation include:
 
-Edit `infra/terraform.tfvars` and set `project_id` to your GCP project ID.
+* Multi-environment deployment support
+* Remote Terraform state management using GCS
+* Secret Manager integration for API keys
+* Automated rollback mechanisms
+* Approval-based production deployments
+* Enhanced monitoring and observability
+* Integration with Cloud Logging and Monitoring
+* Modular Terraform architecture improvements
+* Advanced Cloud Armor security rules
+* Automated API key rotation
+* Multi-region deployment support
+* Blue-Green deployment strategy
 
----
+# Conclusion
 
-## Step 5 — Push to GitHub
+This project establishes a secure, automated, and production-ready framework for deploying Google Cloud API Gateway infrastructure using Terraform and Cloud Build. The implementation improves deployment consistency, strengthens security posture, and reduces operational complexity through Infrastructure as Code and CI/CD automation practices.
 
-```bash
-git add .
-git commit -m "feat: initial infra deployment"
-git push origin main
-```
+The repository provides a scalable foundation for managing API Gateway integrations, backend security enforcement, and automated infrastructure deployments within Google Cloud environments.
 
-Cloud Build triggers automatically and runs all phases.
-
----
-
-## Cloud Build pipeline phases
-
-```
-PHASE 1 — Docker Builds (parallel)
-  build-product   ──▶ push-product  ──┐
-  build-order     ──▶ push-order    ──┤
-  build-inventory ──▶ push-inventory──┤──▶ PHASE 2
-  build-frontend  ──▶ push-frontend ──┘
-
-PHASE 2 — Terraform (sequential)
-  tf-init ──▶ tf-validate ──▶ tf-plan ──▶ tf-apply ──▶ PHASE 3
-
-PHASE 3 — Smoke Test
-  smoke-test (polls LB with retry for up to 5 min)
-```
-
----
-
-## Outputs after deployment
-
-After `terraform apply` completes, check the Cloud Build logs for:
-
-```
-load_balancer_ip       = "X.X.X.X"
-load_balancer_url      = "http://X.X.X.X"
-api_gateway_url        = "https://XXXXX.gateway.dev"
-product_service_url    = "https://....run.app"
-order_service_url      = "https://....run.app"
-inventory_service_url  = "https://....run.app"
-frontend_service_url   = "https://....run.app"
-```
-
-**Test endpoints:**
-
-```bash
-LB_IP=<your-lb-ip>
-
-# Frontend
-curl http://$LB_IP/
-
-# API routes (Cloud Armor injects key automatically)
-curl http://$LB_IP/api/products
-curl http://$LB_IP/api/orders
-curl http://$LB_IP/api/inventory
-
-# Direct API Gateway (should return 401 — no key)
-GATEWAY_URL=<your-gateway-hostname>
-curl https://$GATEWAY_URL/api/products   # → 401 Unauthorized
-```
-
----
-
-## Destroy infrastructure
-
-```bash
-cd infra
-terraform init \
-  -backend-config="bucket=ecommerce-tf-state-<project-id>" \
-  -backend-config="prefix=ecommerce/dev/terraform.tfstate"
-
-terraform destroy -auto-approve \
-  -var=project_id=<your-project-id>
-```
-
----
-
-## Adding HTTPS (future)
-
-1. Register a domain and create a Cloud DNS zone
-2. Add `google_compute_managed_ssl_certificate` in a new `f11-ssl.tf`
-3. Add `google_compute_target_https_proxy` and a port-443 forwarding rule
-4. Add an HTTP→HTTPS redirect URL map on port 80
-5. Point your domain A record to the LB IP
-
----
-
-## Troubleshooting
-
-| Symptom | Cause | Fix |
-|---|---|---|
-| `502 Bad Gateway` | LB not yet propagated | Wait 2–5 min after apply |
-| `401` on LB route | Cloud Armor not attached | Check `f9-03-alb-backends.tf` security_policy |
-| NEG unhealthy | API Gateway still provisioning | Wait, check `gcloud api-gateway gateways describe` |
-| Image pull error | AR repo not yet created | Run bootstrap.sh first, re-trigger build |
-| TF state locked | Previous build crashed | Run `terraform force-unlock <lock-id>` |
