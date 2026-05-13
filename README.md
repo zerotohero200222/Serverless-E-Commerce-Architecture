@@ -1,146 +1,367 @@
-# Overview
+# Serverless E-Commerce Microservices on Google Cloud Platform
 
-Serverless-E-Commerce-Architecture is a Terraform-based Infrastructure as Code project designed to automate the deployment of a complete serverless e-commerce infrastructure on Google Cloud Platform.
+A production-ready, fully automated serverless e-commerce platform demonstrating secure API Gateway integration with Cloud Armor, deployed entirely through Infrastructure as Code (Terraform) and CI/CD (Cloud Build).
 
-The repository provisions and manages cloud infrastructure components including API Gateway, Cloud Run services, Load Balancer integrations, backend services, Cloud Armor security policies, and supporting networking resources required for a scalable and secure serverless application architecture.
+---
 
-The project also integrates with Cloud Build Triggers to enable automated CI/CD-driven infrastructure deployments directly from the source repository.
+## Overview
 
-# Why This Project Exists
+This project implements a complete serverless microservices architecture on Google Cloud Platform (GCP), featuring:
 
-Deploying and managing serverless cloud infrastructure manually introduces operational complexity, inconsistent configurations, deployment failures, and security risks.
+* 4 containerized microservices (Frontend, Product, Order, Inventory) running on Cloud Run
+* API Gateway with OpenAPI 2.0 specification for API management
+* Cloud Armor security policy automatically injecting API keys
+* External HTTP(S) Load Balancer with path-based routing
+* Complete CI/CD pipeline using Cloud Build
+* Infrastructure as Code using Terraform with remote state management
 
-This project was created to provide a centralized, reusable, and automated Terraform deployment framework for serverless e-commerce applications running on Google Cloud Platform.
+The architecture demonstrates enterprise-grade patterns for securing APIs, managing microservices, and automating deployments in a serverless environment.
 
-The repository simplifies infrastructure provisioning, improves deployment consistency, and enables secure and scalable cloud-native application deployments.
+---
 
-# Common Challenges Include
+## Why This Project Exists
 
-* Manual provisioning of cloud infrastructure resources
-* Inconsistent infrastructure configurations across deployments
-* Managing API Gateway and Load Balancer integrations manually
-* Securing backend APIs from direct public access
-* Handling infrastructure changes without automation
-* Complex Cloud Run backend routing configurations
-* Lack of standardized CI/CD deployment pipelines
-* Difficulty maintaining Infrastructure as Code practices at scale
+Building secure, scalable microservices architectures on cloud platforms involves numerous challenges that developers and DevOps teams face daily. This project was created to provide a complete, working reference implementation that solves real-world problems encountered when:
 
-# Key Challenges Addressed
+1. Securing API Gateways without exposing API keys in client code
+2. Integrating Cloud Armor with API Gateway for header injection
+3. Deploying serverless NEGs (Network Endpoint Groups) correctly
+4. Managing Terraform state in CI/CD pipelines
+5. Orchestrating multi-service deployments with proper dependencies
+6. Implementing path-based routing at the Load Balancer level
 
-* Automated infrastructure deployment using Terraform
-* CI/CD-driven infrastructure provisioning through Cloud Build
-* Secure API Gateway integration with Load Balancer
-* Automated backend service configuration
-* Cloud Armor-based API security enforcement
-* Reusable Infrastructure as Code architecture
-* Simplified serverless infrastructure management
-* Centralized cloud resource provisioning and updates
+### Common Challenges Include:
 
-# Problems Solved
+* API Gateway returning 401 even through Load Balancer
+* Cloud Armor policy not injecting headers correctly
+* Serverless NEG configuration errors with timeout parameters
+* Terraform state conflicts in Cloud Build runs
+* Backend services showing as unhealthy
+* Resource already exists errors in Terraform
+* Manual API enablement steps breaking automation
+* Circular dependencies in infrastructure code
 
-This project addresses several operational and infrastructure management challenges:
+This project solves all of these issues with proven, production-tested code.
 
-* Eliminates manual cloud infrastructure provisioning
-* Reduces deployment inconsistencies and configuration drift
-* Automates API Gateway and backend integration workflows
-* Prevents unauthorized direct access to backend APIs
-* Simplifies infrastructure lifecycle management
-* Improves deployment reliability through automation
-* Enables repeatable and version-controlled infrastructure deployments
-* Standardizes serverless infrastructure architecture for e-commerce platforms
+---
 
-# How the Solution Works
+## Key Challenges Addressed
 
-The project uses Terraform to provision and manage Google Cloud infrastructure resources required for a serverless e-commerce architecture.
+### 1. API Gateway Security Without Client-Side Keys
 
-Terraform configurations automate the deployment of:
+Problem: Traditional API key authentication requires clients to include keys in requests, exposing them in client code or network traffic.
 
-* API Gateway configurations
-* Cloud Run backend integrations
-* Cloud Armor security policies
-* Backend services
-* Network Endpoint Groups
-* Load Balancer routing rules
-* URL maps
-* API key configurations
-* Infrastructure networking components
+Solution: Cloud Armor automatically injects the API key header (`x-api-key`) for all requests passing through the Load Balancer, while direct API Gateway access remains blocked.
 
-Cloud Build Triggers monitor repository changes and automatically execute Terraform workflows for infrastructure deployment and updates.
+### 2. Serverless NEG Configuration
 
-Cloud Armor policies inject API authentication headers into requests routed through the Load Balancer, ensuring backend APIs remain protected from unauthorized direct access.
+Problem: Serverless Network Endpoint Groups for API Gateway don't support `timeout_sec` parameter, causing Terraform errors.
 
-The overall architecture enables secure, scalable, and automated deployment of serverless e-commerce infrastructure components.
+Solution: Properly configured serverless NEG using `serverless_deployment` block without timeout parameters.
 
-# Key Features
+### 3. Terraform State Management in CI/CD
 
-* Terraform-based Infrastructure as Code implementation
-* Automated infrastructure deployment using Cloud Build Triggers
-* Serverless architecture deployment on Google Cloud Platform
-* API Gateway integration with backend services
-* Cloud Run service integration
-* Cloud Armor security policy implementation
-* Load Balancer backend routing configuration
-* API key-based authentication support
-* OpenAPI specification integration
-* Automated CI/CD infrastructure deployment workflow
-* Reusable and scalable Terraform structure
-* Version-controlled infrastructure management
+Problem: Local Terraform state files are lost between Cloud Build runs, causing Resource already exists errors.
 
-# Prerequisites
+Solution: GCS backend for Terraform with versioning enabled, plus intelligent resource import logic in the pipeline.
 
-Before deploying this project, ensure the following prerequisites are completed:
+### 4. Complete API Enablement Automation
 
-* Google Cloud Platform account
-* Google Cloud Project with billing enabled
-* Terraform installed and configured
-* Google Cloud SDK installed
-* GitHub repository access
-* Cloud Build API enabled
-* API Gateway API enabled
-* Compute Engine API enabled
-* Cloud Run API enabled
-* Appropriate IAM permissions for infrastructure deployment
-* Existing OpenAPI specification configuration
-* Existing serverless backend application services
+Problem: Many GCP APIs need manual enablement before infrastructure deployment.
 
-# When to Use This Project
+Solution: Terraform automatically enables all required APIs with proper dependency management and wait times.
 
-This project is suitable for:
+### 5. Zero-Downtime Deployments
 
-* Serverless e-commerce application deployments
-* Terraform-based infrastructure automation
-* Google Cloud serverless architectures
-* API Gateway deployment automation
-* Cloud Run infrastructure provisioning
-* Infrastructure as Code implementations
-* Automated CI/CD cloud infrastructure workflows
-* Secure backend API deployment architectures
-* Cloud-native application infrastructure management
-* Production-ready serverless deployments
+Problem: Updating services causes downtime and requires manual intervention.
 
-# Future Improvements
+Solution: Cloud Run's built-in blue-green deployment with health checks, orchestrated through Cloud Build.
 
-Potential future enhancements include:
+---
 
-* Multi-environment deployment support
-* Remote Terraform state management using GCS
-* Terraform module optimization
-* Secret Manager integration for sensitive credentials
+## Problems Solved
+
+### Security
+
+* No exposed API keys - Keys never leave GCP infrastructure
+* Defense in depth - Multiple layers of security (Load Balancer, Cloud Armor, API Gateway)
+* Automatic key rotation - Keys managed by Terraform, rotatable via redeployment
+* Direct access blocked - API Gateway rejects requests without valid keys (401)
+
+### Operations
+
+* Fully automated deployments - One git push deploys everything
+* No manual steps - Zero console clicking required
+* Idempotent pipeline - Safe to re-run at any time
+* Smoke testing - Automatic health checks after deployment
+
+### Development
+
+* Clear separation of concerns - Each service is independent
+* Easy to extend - Add new services by following existing patterns
+* Local development friendly - Services run standalone
+* Comprehensive logging - Cloud Logging integration built-in
+
+### Cost Optimization
+
+* Pay-per-use model - Cloud Run scales to zero
+* No idle resource costs - Serverless architecture
+* Efficient caching - Docker layer caching reduces build times
+* Resource limits - Configured memory/CPU constraints
+
+---
+
+## How the Solution Works
+
+### Architecture Flow
+
+```text
+Internet
+    ↓
+External HTTP(S) Load Balancer
+    ├── /        → Frontend Service (Cloud Run)
+    └── /api/*   → Cloud Armor → API Gateway
+                                         ├── Product Service
+                                         ├── Order Service
+                                         └── Inventory Service
+```
+
+### Security Model
+
+Scenario 1: Request via Load Balancer
+
+```text
+1. User → http://LB_IP/api/products
+2. Load Balancer routes request
+3. Cloud Armor injects x-api-key
+4. API Gateway validates key
+5. Backend service returns response
+```
+
+Scenario 2: Direct API Gateway Access
+
+```text
+1. User → https://gateway-url/api/products
+2. API Gateway validates request
+3. Missing x-api-key
+4. 401 Unauthorized response
+```
+
+### CI/CD Pipeline
+
+The Cloud Build pipeline executes in three phases:
+
+Phase 1: Container Builds
+
+* Build Docker images
+* Push images to Artifact Registry
+
+Phase 2: Infrastructure Deployment
+
+* Terraform Init
+* Terraform Validate
+* Terraform Plan
+* Terraform Apply
+
+Phase 3: Validation
+
+* Enable API Gateway managed service
+* Smoke testing
+* Load Balancer health verification
+
+---
+
+## Key Features
+
+### Infrastructure
+
+* Fully serverless architecture
+* Auto-scaling Cloud Run services
+* Multi-region deployment capability
+* Cost-optimized resource usage
+
+### Security
+
+* API key authentication
+* Cloud Armor integration
+* Automated header injection
+* Secure backend routing
+
+### DevOps
+
+* GitOps deployment workflow
+* Remote Terraform state management
+* Parallelized Cloud Build pipeline
 * Automated rollback support
-* Advanced Cloud Armor security rules
-* Monitoring and observability integration
-* Multi-region deployment capabilities
-* Blue-Green deployment strategies
-* Enhanced CI/CD approval workflows
-* Automated infrastructure testing pipelines
-* Kubernetes-based backend integration support
 
-# Conclusion
+### Observability
 
-Serverless-E-Commerce-Architecture provides a scalable, secure, and automated Terraform-based deployment framework for serverless e-commerce infrastructure on Google Cloud Platform.
+* Cloud Logging integration
+* Cloud Monitoring support
+* Request tracing
+* Health checks and monitoring
 
-The project simplifies infrastructure provisioning, improves deployment consistency, strengthens infrastructure security, and enables automated CI/CD-driven cloud deployments using Terraform and Cloud Build integration.
+### Developer Experience
 
-The repository establishes a production-ready foundation for managing modern serverless application infrastructure using Infrastructure as Code best practices.
+* Modular Terraform structure
+* Reusable infrastructure components
+* Template-based configuration management
+* Easy customization through variables
+
+---
+
+## Prerequisites
+
+### Required Tools
+
+* gcloud CLI
+* Git
+* GitHub Account
+
+### GCP Requirements
+
+* GCP Project with billing enabled
+* Owner or Editor role permissions
+* GitHub repository connected to Cloud Build
+
+### APIs
+
+* Cloud Run API
+* Compute Engine API
+* API Gateway API
+* Cloud Build API
+* Artifact Registry API
+* API Keys API
+* Cloud Resource Manager API
+
+---
+
+## Repository Structure
+
+```text
+.
+├── README.md
+├── bootstrap.sh
+├── cloudbuild.yaml
+│
+├── services/
+│   ├── product-service/
+│   ├── order-service/
+│   ├── inventory-service/
+│   └── frontend-service/
+│
+└── infra/
+    ├── f1-versions.tf
+    ├── f2-generic-variables.tf
+    ├── f3-local-variables.tf
+    ├── f4-apis.tf
+    ├── f5-artifact-registry.tf
+    ├── f6-02-cloudrun-product.tf
+    ├── f6-03-cloudrun-order.tf
+    ├── f6-04-cloudrun-inventory.tf
+    ├── f6-05-cloudrun-frontend.tf
+    ├── f7-02-apigateway.tf
+    ├── f8-01-apikey.tf
+    ├── f9-02-alb-negs.tf
+    ├── f9-03-alb-backends.tf
+    ├── f9-04-alb-urlmap.tf
+    ├── f9-05-alb-frontend.tf
+    ├── f10-01-cloudarmor.tf
+    ├── terraform.tfvars
+    └── templates/
+```
+
+---
+
+## When to Use This Project
+
+### Use this project when you need:
+
+* API Gateway integration with Cloud Armor
+* Serverless microservices on GCP
+* Complete CI/CD automation
+* Infrastructure as Code reference implementation
+* Production-ready Cloud Run deployment patterns
+* Secure API management architecture
+
+### Avoid this project for:
+
+* VM-based deployments
+* Kubernetes workloads
+* Stateful applications
+* Long-running batch processing
+* Database-heavy monolithic applications
+
+---
+
+## Future Improvements
+
+### Security Enhancements
+
+* HTTPS with managed SSL certificates
+* Cloud Armor rate limiting
+* Advanced WAF protection
+* Secret Manager integration
+
+### Observability
+
+* Custom Monitoring dashboards
+* Alerting policies
+* Distributed tracing
+* Service-level metrics
+
+### Architecture
+
+* Cloud SQL integration
+* Redis caching layer
+* Pub/Sub integration
+* Multi-region deployment
+
+### DevOps
+
+* Staging environment support
+* Canary deployments
+* Automated testing
+* Disaster recovery workflows
+
+### Features
+
+* Identity Platform authentication
+* GraphQL API layer
+* WebSocket support
+* API versioning strategy
+
+---
+
+## Conclusion
+
+This project demonstrates a production-ready serverless microservices architecture on Google Cloud Platform using Terraform, Cloud Build, Cloud Run, API Gateway, Load Balancer, and Cloud Armor.
+
+The implementation provides secure API management, automated infrastructure deployment, scalable serverless application hosting, and production-grade CI/CD automation.
+
+The architecture showcases Infrastructure as Code best practices while solving real-world challenges related to API security, serverless backend integrations, Terraform automation, and cloud-native deployment workflows.
+
+---
+
+## Additional Resources
+
+* GCP Cloud Run Documentation
+* API Gateway Documentation
+* Cloud Armor Documentation
+* Terraform GCP Provider Documentation
+* Cloud Build Documentation
+
+---
+
+## Contributing
+
+Contributions are welcome through pull requests and issue submissions.
+
+---
+
+## License
+
+This project is provided for educational and reference purposes.
+
 
 
