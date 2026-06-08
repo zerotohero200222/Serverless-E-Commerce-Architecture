@@ -23,10 +23,9 @@ terraform {
   # Bucket name is injected via -backend-config in cloudbuild.yaml so this
   # file stays environment-agnostic.
   backend "gcs" {
-    # Populated at init time:
-    #   -backend-config="bucket=${_TF_STATE_BUCKET}"
-    #   -backend-config="prefix=ecommerce/terraform.tfstate"
-  }
+  bucket = "tfstate-project-e95a0aa2-8103-46cd-9f4"
+  prefix = "ecommerce/dev/terraform.tfstate"
+}
 }
 
 # ─── Default Provider ────────────────────────────────────────────────────────
