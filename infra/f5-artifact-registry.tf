@@ -1,6 +1,6 @@
 ##############################################################################
 # f5-artifact-registry.tf — Docker image repository in Artifact Registry
-# IAM bindings managed via gcloud in cloudbuild.yaml, not Terraform
+# IAM bindings managed via gcloud in cloudbuild.yaml, not Terraform #vhh,vmnvhjvh
 ##############################################################################
 
 resource "google_artifact_registry_repository" "ecommerce" {
