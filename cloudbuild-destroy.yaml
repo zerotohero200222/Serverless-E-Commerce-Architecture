@@ -1,0 +1,123 @@
+##############################################################################
+# cloudbuild-destroy.yaml — Ecommerce Platform TEARDOWN Pipeline
+#
+# Separate on purpose from cloudbuild.yaml. This ONLY runs Terraform destroy
+# against the same remote state your normal pipeline writes to. It never
+# builds or pushes images, and it never runs unless you invoke it yourself.
+#
+# Required trigger / CLI substitution variables (same values you used to
+# build/apply, so it points at the same state file):
+#   _TF_STATE_BUCKET, _PROJECT_ID, _REGION, _ENV, _APP_NAME, _AR_REPO
+#
+# Manual run from Cloud Shell / local terminal (recommended — no trigger needed):
+#
+#   gcloud builds submit --config=cloudbuild-destroy.yaml \
+#     --substitutions=_PROJECT_ID=YOUR_PROJECT_ID,_TF_STATE_BUCKET=YOUR_BUCKET,_REGION=us-central1,_ENV=dev,_APP_NAME=ecommerce,_AR_REPO=ecommerce-images \
+#     .
+#
+# If you'd rather wire this to a Cloud Build TRIGGER, create a second trigger
+# in the console pointing at this file, set to "manual invocation" (no branch
+# push), so nobody destroys infra by accident on a git push.
+##############################################################################
+
+substitutions:
+  _REGION: "us-central1"
+  _ENV: "dev"
+  _APP_NAME: "ecommerce"
+  _AR_REPO: "ecommerce-images"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  dynamic_substitutions: true
+
+steps:
+
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 1 — terraform init against the SAME backend/state as cloudbuild.yaml
+# ════════════════════════════════════════════════════════════════════════════
+
+  - id: "tf-init"
+    name: "hashicorp/terraform:1.6"
+    waitFor: ["-"]
+    entrypoint: "terraform"
+    args:
+      - init
+      - -backend-config=bucket=$_TF_STATE_BUCKET
+      - -backend-config=prefix=$_APP_NAME/$_ENV/terraform.tfstate
+      - -input=false
+    dir: "infra"
+
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 2 — terraform plan -destroy  (produces a reviewable plan artifact)
+# ════════════════════════════════════════════════════════════════════════════
+
+  - id: "tf-destroy-plan"
+    name: "hashicorp/terraform:1.6"
+    waitFor: ["tf-init"]
+    entrypoint: "terraform"
+    args:
+      - plan
+      - -destroy
+      - -input=false
+      - -out=tfdestroyplan
+      - -var=project_id=$_PROJECT_ID
+      - -var=region=$_REGION
+      - -var=env=$_ENV
+      - -var=product_image_tag=latest
+      - -var=order_image_tag=latest
+      - -var=inventory_image_tag=latest
+      - -var=frontend_image_tag=latest
+    dir: "infra"
+
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 3 — terraform apply of the destroy plan (this is what actually deletes)
+# ════════════════════════════════════════════════════════════════════════════
+
+  - id: "tf-destroy-apply"
+    timeout: "3000s"
+    name: "hashicorp/terraform:1.6"
+    waitFor: ["tf-destroy-plan"]
+    entrypoint: "terraform"
+    args:
+      - apply
+      - -input=false
+      - -auto-approve
+      - tfdestroyplan
+    dir: "infra"
+
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 4 — (Optional) clean up the Artifact Registry repo too.
+# Terraform only destroys what's in *its* state. If you imported the AR repo
+# (see tf-import-ar-repo in cloudbuild.yaml) this step is redundant — leave it
+# commented out unless you want images gone as well.
+# ════════════════════════════════════════════════════════════════════════════
+
+  # - id: "delete-ar-repo"
+  #   name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
+  #   waitFor: ["tf-destroy-apply"]
+  #   entrypoint: "sh"
+  #   args:
+  #     - "-c"
+  #     - |
+  #       gcloud artifacts repositories delete $_AR_REPO \
+  #         --location=$_REGION \
+  #         --project=$_PROJECT_ID \
+  #         --quiet || true
+  #       echo "✅ Artifact Registry repo removed (if it existed)"
+
+  - id: "confirm-destroyed"
+    name: "hashicorp/terraform:1.6"
+    waitFor: ["tf-destroy-apply"]
+    entrypoint: "sh"
+    args:
+      - "-c"
+      - |
+        echo ""
+        echo "════════════════════════════════════════════════"
+        echo "  DESTROY COMPLETE"
+        echo "  App     : $_APP_NAME"
+        echo "  Env     : $_ENV"
+        echo "  Project : $_PROJECT_ID"
+        echo "════════════════════════════════════════════════"
+
+timeout: "3600s"
