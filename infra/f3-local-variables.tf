@@ -44,9 +44,6 @@ locals {
   frontend_neg     = "${local.prefix}-frontend-neg"
   api_gateway_neg  = "${local.prefix}-apigw-neg"
 
-  # ── Cloud Armor ─────────────────────────────────────────────────────────────
-  armor_policy = "${local.prefix}-armor-policy"
-
   # ── Common labels applied to every resource ─────────────────────────────────
   common_labels = {
     app         = var.app_name
