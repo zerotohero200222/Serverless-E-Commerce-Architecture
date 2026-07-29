@@ -11,9 +11,8 @@ locals {
   # The `enable-apigw-managed-service` Cloud Build step enables it post-apply.
   required_apis = [
     "run.googleapis.com",                # Cloud Run
-    "compute.googleapis.com",            # Load Balancer, NEGs, Cloud Armor
+    "compute.googleapis.com",            # Load Balancer, NEGs
     "apigateway.googleapis.com",         # API Gateway
-    "apikeys.googleapis.com",            # API Keys (for gateway auth)
     "servicemanagement.googleapis.com",  # Required by API Gateway internally
     "servicecontrol.googleapis.com",     # Required by API Gateway internally
     "cloudbuild.googleapis.com",         # Cloud Build CI/CD
