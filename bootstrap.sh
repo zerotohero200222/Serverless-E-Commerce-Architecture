@@ -66,10 +66,8 @@ ROLES=(
   "roles/artifactregistry.admin"       # Push/pull container images
   "roles/apigateway.admin"             # Manage API Gateway
   "roles/compute.networkAdmin"         # Manage LB, NEGs, IP addresses
-  "roles/compute.securityAdmin"        # Manage Cloud Armor policies
   "roles/iam.serviceAccountUser"       # Impersonate Cloud Run SA
   "roles/serviceusage.serviceUsageAdmin" # Enable GCP APIs
-  "roles/serviceusage.apiKeysAdmin"    # Create/manage API keys
   "roles/iam.securityAdmin"            # Set IAM on Cloud Run and AR repos
 )
 
