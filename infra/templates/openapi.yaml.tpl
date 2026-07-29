@@ -8,17 +8,6 @@ info:
 schemes:
   - https
 
-# ── API Key Security Definition ───────────────────────────────────────────────
-securityDefinitions:
-  api_key:
-    type: "apiKey"
-    name: "x-api-key"
-    in: "header"
-
-# Apply API key requirement globally to all routes
-security:
-  - api_key: []
-
 # ── Routes ────────────────────────────────────────────────────────────────────
 paths:
 
@@ -28,8 +17,6 @@ paths:
       operationId: listProducts
       summary: "List all products"
       tags: ["Product"]
-      security:
-        - api_key: []
       x-google-backend:
         address: ${product_url}
         path_translation: APPEND_PATH_TO_ADDRESS
@@ -48,8 +35,6 @@ paths:
       operationId: createProduct
       summary: "Create a new product"
       tags: ["Product"]
-      security:
-        - api_key: []
       x-google-backend:
         address: ${product_url}
         path_translation: APPEND_PATH_TO_ADDRESS
@@ -69,8 +54,6 @@ paths:
       operationId: getProductById
       summary: "Get product by ID"
       tags: ["Product"]
-      security:
-        - api_key: []
       x-google-backend:
         address: ${product_url}
         path_translation: APPEND_PATH_TO_ADDRESS
@@ -94,8 +77,6 @@ paths:
       operationId: updateProduct
       summary: "Update a product"
       tags: ["Product"]
-      security:
-        - api_key: []
       x-google-backend:
         address: ${product_url}
         path_translation: APPEND_PATH_TO_ADDRESS
@@ -115,8 +96,6 @@ paths:
       operationId: deleteProduct
       summary: "Delete a product"
       tags: ["Product"]
-      security:
-        - api_key: []
       x-google-backend:
         address: ${product_url}
         path_translation: APPEND_PATH_TO_ADDRESS
@@ -138,8 +117,6 @@ paths:
       operationId: listOrders
       summary: "List all orders"
       tags: ["Order"]
-      security:
-        - api_key: []
       x-google-backend:
         address: ${order_url}
         path_translation: APPEND_PATH_TO_ADDRESS
@@ -156,8 +133,6 @@ paths:
       operationId: createOrder
       summary: "Create a new order"
       tags: ["Order"]
-      security:
-        - api_key: []
       x-google-backend:
         address: ${order_url}
         path_translation: APPEND_PATH_TO_ADDRESS
@@ -177,8 +152,6 @@ paths:
       operationId: getOrderById
       summary: "Get order by ID"
       tags: ["Order"]
-      security:
-        - api_key: []
       x-google-backend:
         address: ${order_url}
         path_translation: APPEND_PATH_TO_ADDRESS
@@ -202,8 +175,6 @@ paths:
       operationId: updateOrder
       summary: "Update an order"
       tags: ["Order"]
-      security:
-        - api_key: []
       x-google-backend:
         address: ${order_url}
         path_translation: APPEND_PATH_TO_ADDRESS
@@ -223,8 +194,6 @@ paths:
       operationId: deleteOrder
       summary: "Delete an order"
       tags: ["Order"]
-      security:
-        - api_key: []
       x-google-backend:
         address: ${order_url}
         path_translation: APPEND_PATH_TO_ADDRESS
@@ -246,8 +215,6 @@ paths:
       operationId: listInventory
       summary: "List all inventory"
       tags: ["Inventory"]
-      security:
-        - api_key: []
       x-google-backend:
         address: ${inventory_url}
         path_translation: APPEND_PATH_TO_ADDRESS
@@ -264,8 +231,6 @@ paths:
       operationId: createInventory
       summary: "Create an inventory record"
       tags: ["Inventory"]
-      security:
-        - api_key: []
       x-google-backend:
         address: ${inventory_url}
         path_translation: APPEND_PATH_TO_ADDRESS
@@ -285,8 +250,6 @@ paths:
       operationId: getInventoryById
       summary: "Get inventory by product ID"
       tags: ["Inventory"]
-      security:
-        - api_key: []
       x-google-backend:
         address: ${inventory_url}
         path_translation: APPEND_PATH_TO_ADDRESS
@@ -310,8 +273,6 @@ paths:
       operationId: updateInventory
       summary: "Update inventory"
       tags: ["Inventory"]
-      security:
-        - api_key: []
       x-google-backend:
         address: ${inventory_url}
         path_translation: APPEND_PATH_TO_ADDRESS
@@ -331,8 +292,6 @@ paths:
       operationId: deleteInventory
       summary: "Delete inventory record"
       tags: ["Inventory"]
-      security:
-        - api_key: []
       x-google-backend:
         address: ${inventory_url}
         path_translation: APPEND_PATH_TO_ADDRESS
