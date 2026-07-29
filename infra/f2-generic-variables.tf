@@ -105,13 +105,6 @@ variable "api_id" {
   default     = "ecommerce-api"
 }
 
-# ─── Cloud Armor ─────────────────────────────────────────────────────────────
-variable "cloud_armor_policy_name" {
-  description = "Name for the Cloud Armor security policy."
-  type        = string
-  default     = "ecommerce-armor-policy"
-}
-
 # ─── Load Balancer ───────────────────────────────────────────────────────────
 variable "lb_name" {
   description = "Base name for all Load Balancer resources."
